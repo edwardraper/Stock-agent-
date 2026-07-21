@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
-"""Check per-color stock for the Union Kingdom Clothing double-layer polar
-fleece hoodie and push an ntfy.sh notification whenever a color transitions
-from out-of-stock to in-stock.
+"""Check per-color, per-size stock for the Union Kingdom Clothing polar
+fleece hoodie and push an ntfy.sh notification whenever any color/size
+combination transitions from out-of-stock to in-stock.
+
+On this store, colors are separate Shopify products linked via swatch
+links on the product page (not variants of a single product), and the
+Shopify /products/<handle>.json endpoint doesn't expose live inventory
+(its "available" field is always null). Real stock status instead lives
+in each page's embedded ProductGroup ld+json block, so this scrapes that.
 
 Run standalone (state persisted in state.json) or via the scheduled
 GitHub Actions workflow in .github/workflows/stock-check.yml.
@@ -14,39 +20,65 @@ from pathlib import Path
 
 import requests
 
-PRODUCT_URL = "https://unionkingdomclo.com/products/double-layer-polar-fleece-hoodie.json"
-PRODUCT_PAGE = "https://unionkingdomclo.com/products/double-layer-polar-fleece-hoodie"
+STORE = "https://unionkingdomclo.com"
+BASE_HANDLE = "double-layer-polar-fleece-hoodie"
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "hoodie-restock-a1eb6a932d")
 NTFY_URL = f"https://ntfy.sh/{NTFY_TOPIC}"
 STATE_FILE = Path(__file__).parent / "state.json"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; StockAgent/1.0)"}
+DEBUG = bool(os.environ.get("DEBUG"))
 
 
-def fetch_product():
-    resp = requests.get(PRODUCT_URL, headers=HEADERS, timeout=30)
+def fetch_html(handle):
+    resp = requests.get(f"{STORE}/products/{handle}", headers=HEADERS, timeout=30)
     resp.raise_for_status()
-    return resp.json()["product"]
+    return resp.text
 
 
-def color_option_index(product):
-    for i, opt in enumerate(product["options"]):
-        if opt["name"].strip().lower() in ("color", "colour"):
-            return i
-    return 0
+def discover_color_handles(base_html):
+    handles = set(re.findall(
+        r'class="product-swatch-link[^"]*"\s+href="/products/([a-z0-9\-]+)"', base_html
+    ))
+    handles.add(BASE_HANDLE)
+    return sorted(handles)
 
 
-def stock_by_color(product):
-    idx = color_option_index(product)
-    key = f"option{idx + 1}"
-    colors = {}
-    variant_for_color = {}
-    for variant in product["variants"]:
-        color = variant.get(key) or variant["title"]
-        available = bool(variant.get("available"))
-        colors[color] = colors.get(color, False) or available
-        if available and color not in variant_for_color:
-            variant_for_color[color] = variant["id"]
-    return colors, variant_for_color
+def extract_product_group(html):
+    for m in re.finditer(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', html, re.DOTALL):
+        try:
+            data = json.loads(m.group(1))
+        except json.JSONDecodeError:
+            continue
+        if data.get("@type") == "ProductGroup":
+            return data
+    return None
+
+
+def color_name_from_title(name):
+    m = re.search(r"'([^']+)'", name or "")
+    return m.group(1) if m else (name or "Unknown")
+
+
+def stock_for_handle(handle):
+    html = fetch_html(handle)
+    group = extract_product_group(html)
+    if not group:
+        print(f"warning: no ProductGroup data found for {handle}", file=sys.stderr)
+        return None, {}
+
+    color = color_name_from_title(group.get("name", handle))
+    sizes = {}
+    for variant in group.get("hasVariant", []):
+        size = variant.get("name", "").rsplit(" - ", 1)[-1].strip()
+        offer = variant.get("offers", {})
+        available = "instock" in offer.get("availability", "").lower()
+        url = offer.get("url", f"{STORE}/products/{handle}")
+        sizes[size] = {"available": available, "url": url}
+
+    if DEBUG:
+        print(f"debug: {handle} -> color={color!r} sizes={ {s: v['available'] for s, v in sizes.items()} }")
+
+    return color, sizes
 
 
 def load_state():
@@ -72,52 +104,45 @@ def notify(title, message):
 
 
 def main():
-    product = fetch_product()
+    base_html = fetch_html(BASE_HANDLE)
+    handles = discover_color_handles(base_html)
+    print("Tracking color product handles:", handles)
 
-    if os.environ.get("DEBUG_DUMP"):
-        print("options:", product["options"])
-        print("first variant raw:", json.dumps(product["variants"][0], indent=2))
-
-    if os.environ.get("DEBUG_HTML"):
-        html_resp = requests.get(PRODUCT_PAGE, headers=HEADERS, timeout=30)
-        html = html_resp.text
-        print("HTML status:", html_resp.status_code, "length:", len(html))
-        for m in re.finditer(r"color", html, re.IGNORECASE):
-            start = max(0, m.start() - 80)
-            print("color ctx:", html[start:m.start() + 80].replace("\n", " "))
-        handles = sorted(set(re.findall(r"/products/([a-z0-9\-]+)", html)))
-        print("linked product handles:", handles)
-        for h in handles:
-            idx = html.find(f"/products/{h}")
-            print(f"--- context for {h} ---")
-            print(html[max(0, idx - 400):idx + 100].replace("\n", " "))
-        title_m = re.search(r"<title>(.*?)</title>", html, re.DOTALL)
-        print("page title:", title_m.group(1) if title_m else None)
-        for m in re.finditer(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', html, re.DOTALL):
-            print("ld+json:", m.group(1)[:3000])
-
-    current, variant_for_color = stock_by_color(product)
     previous = load_state()
+    current = {}
+    details = {}
+
+    for handle in handles:
+        try:
+            color, sizes = stock_for_handle(handle)
+        except requests.RequestException as exc:
+            print(f"warning: failed to fetch {handle}: {exc}", file=sys.stderr)
+            continue
+        if color is None:
+            continue
+        for size, info in sizes.items():
+            key = f"{handle}|{size}"
+            current[key] = info["available"]
+            details[key] = {"color": color, "size": size, "url": info["url"]}
 
     restocked = [
-        color
-        for color, available in current.items()
-        if available and not previous.get(color, False)
+        key for key, available in current.items()
+        if available and not previous.get(key, False)
     ]
 
     if restocked:
-        lines = []
-        for color in restocked:
-            vid = variant_for_color.get(color)
-            link = f"{PRODUCT_PAGE}?variant={vid}" if vid else PRODUCT_PAGE
-            lines.append(f"{color}: {link}")
+        lines = [
+            f"{details[key]['color']} ({details[key]['size']}): {details[key]['url']}"
+            for key in restocked
+        ]
         notify(
             "Hoodie back in stock!",
-            "Double Layer Polar Fleece Hoodie is back in stock:\n" + "\n".join(lines),
+            "Union Kingdom polar fleece hoodie restocked:\n" + "\n".join(lines),
         )
-        print("Notified restock for:", ", ".join(restocked))
+        print("Notified restock for:", ", ".join(f"{details[k]['color']} {details[k]['size']}" for k in restocked))
     else:
-        print("No new restocks. Current status:", current)
+        summary = {f"{details[k]['color']} {details[k]['size']}": v for k, v in current.items()}
+        print("No new restocks. Current status:", summary)
 
     save_state(current)
 

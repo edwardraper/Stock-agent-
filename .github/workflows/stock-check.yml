@@ -5,12 +5,8 @@ on:
     - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
-      debug_dump:
-        description: "Print raw product options/variants to the log"
-        type: boolean
-        default: false
-      debug_html:
-        description: "Fetch and inspect the product page HTML for color/stock info"
+      debug:
+        description: "Print per-color/size availability to the log"
         type: boolean
         default: false
 
@@ -36,8 +32,7 @@ jobs:
       - name: Check stock
         env:
           NTFY_TOPIC: hoodie-restock-a1eb6a932d
-          DEBUG_DUMP: ${{ inputs.debug_dump }}
-          DEBUG_HTML: ${{ inputs.debug_html }}
+          DEBUG: ${{ inputs.debug }}
         run: python check_stock.py
 
       - name: Commit updated state
