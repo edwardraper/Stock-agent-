@@ -9,6 +9,10 @@ on:
         description: "Print raw product options/variants to the log"
         type: boolean
         default: false
+      debug_html:
+        description: "Fetch and inspect the product page HTML for color/stock info"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,6 +37,7 @@ jobs:
         env:
           NTFY_TOPIC: hoodie-restock-a1eb6a932d
           DEBUG_DUMP: ${{ inputs.debug_dump }}
+          DEBUG_HTML: ${{ inputs.debug_html }}
         run: python check_stock.py
 
       - name: Commit updated state

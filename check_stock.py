@@ -8,6 +8,7 @@ GitHub Actions workflow in .github/workflows/stock-check.yml.
 """
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -75,12 +76,19 @@ def main():
 
     if os.environ.get("DEBUG_DUMP"):
         print("options:", product["options"])
-        for v in product["variants"]:
-            print(
-                "variant:", v.get("id"), v.get("title"),
-                "option1=", v.get("option1"), "option2=", v.get("option2"),
-                "option3=", v.get("option3"), "available=", v.get("available"),
-            )
+        print("first variant raw:", json.dumps(product["variants"][0], indent=2))
+
+    if os.environ.get("DEBUG_HTML"):
+        html_resp = requests.get(PRODUCT_PAGE, headers=HEADERS, timeout=30)
+        html = html_resp.text
+        print("HTML status:", html_resp.status_code, "length:", len(html))
+        for m in re.finditer(r"color", html, re.IGNORECASE):
+            start = max(0, m.start() - 80)
+            print("color ctx:", html[start:m.start() + 80].replace("\n", " "))
+        handles = sorted(set(re.findall(r"/products/([a-z0-9\-]+)", html)))
+        print("linked product handles:", handles)
+        for m in re.finditer(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', html, re.DOTALL):
+            print("ld+json:", m.group(1)[:2000])
 
     current, variant_for_color = stock_by_color(product)
     previous = load_state()
