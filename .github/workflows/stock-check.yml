@@ -3,7 +3,12 @@ name: Hoodie Stock Check
 on:
   schedule:
     - cron: "*/30 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      debug_dump:
+        description: "Print raw product options/variants to the log"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -27,6 +32,7 @@ jobs:
       - name: Check stock
         env:
           NTFY_TOPIC: hoodie-restock-a1eb6a932d
+          DEBUG_DUMP: ${{ inputs.debug_dump }}
         run: python check_stock.py
 
       - name: Commit updated state

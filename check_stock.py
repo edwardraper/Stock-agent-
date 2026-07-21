@@ -72,6 +72,16 @@ def notify(title, message):
 
 def main():
     product = fetch_product()
+
+    if os.environ.get("DEBUG_DUMP"):
+        print("options:", product["options"])
+        for v in product["variants"]:
+            print(
+                "variant:", v.get("id"), v.get("title"),
+                "option1=", v.get("option1"), "option2=", v.get("option2"),
+                "option3=", v.get("option3"), "available=", v.get("available"),
+            )
+
     current, variant_for_color = stock_by_color(product)
     previous = load_state()
 
