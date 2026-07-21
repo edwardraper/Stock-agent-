@@ -87,8 +87,14 @@ def main():
             print("color ctx:", html[start:m.start() + 80].replace("\n", " "))
         handles = sorted(set(re.findall(r"/products/([a-z0-9\-]+)", html)))
         print("linked product handles:", handles)
+        for h in handles:
+            idx = html.find(f"/products/{h}")
+            print(f"--- context for {h} ---")
+            print(html[max(0, idx - 400):idx + 100].replace("\n", " "))
+        title_m = re.search(r"<title>(.*?)</title>", html, re.DOTALL)
+        print("page title:", title_m.group(1) if title_m else None)
         for m in re.finditer(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', html, re.DOTALL):
-            print("ld+json:", m.group(1)[:2000])
+            print("ld+json:", m.group(1)[:3000])
 
     current, variant_for_color = stock_by_color(product)
     previous = load_state()
