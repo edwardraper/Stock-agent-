@@ -104,6 +104,12 @@ def notify(title, message):
 
 
 def main():
+    test_message = os.environ.get("TEST_MESSAGE")
+    if test_message:
+        notify("Stock Agent Test", test_message)
+        print("Sent test notification:", test_message)
+        return
+
     base_html = fetch_html(BASE_HANDLE)
     handles = discover_color_handles(base_html)
     print("Tracking color product handles:", handles)

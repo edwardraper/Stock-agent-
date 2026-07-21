@@ -9,6 +9,10 @@ on:
         description: "Print per-color/size availability to the log"
         type: boolean
         default: false
+      test_message:
+        description: "If set, sends this text as an ntfy notification instead of checking stock"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -33,6 +37,7 @@ jobs:
         env:
           NTFY_TOPIC: hoodie-restock-a1eb6a932d
           DEBUG: ${{ inputs.debug }}
+          TEST_MESSAGE: ${{ inputs.test_message }}
         run: python check_stock.py
 
       - name: Commit updated state
