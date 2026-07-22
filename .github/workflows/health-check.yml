@@ -1,0 +1,28 @@
+name: Daily Health Check
+
+on:
+  schedule:
+    # 09:00 UK time. UK is currently on BST (UTC+1), so this fires at
+    # 08:00 UTC. When the UK switches to GMT (UTC+0) in late October,
+    # this will fire at 08:00 GMT / 8am UK time instead of 9am, since
+    # GitHub Actions cron doesn't follow local daylight-saving changes.
+    - cron: "0 8 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install -r requirements.txt
+
+      - name: Send daily status
+        env:
+          NTFY_TOPIC: hoodie-restock-a1eb6a932d
+          HEALTH_CHECK: "true"
+        run: python check_stock.py

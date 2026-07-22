@@ -29,7 +29,13 @@ So `check_stock.py`:
    buy that variant.
 
 `.github/workflows/stock-check.yml` runs this on a GitHub Actions
-schedule (every 30 minutes) and can also be triggered manually.
+schedule (hourly) and can also be triggered manually.
+
+`.github/workflows/health-check.yml` runs a separate daily job (9am UK
+time) that does a real scan of every color/size and sends a status ntfy
+notification either way — "all sold out" or a list of what's in stock —
+so you have a heartbeat confirming the checker is actually running, not
+just silently failing.
 
 ## One-time setup (you need to do this)
 
@@ -61,8 +67,14 @@ schedule (every 30 minutes) and can also be triggered manually.
 ## Adjusting things later
 
 - **Check frequency**: edit the cron expression in
-  `.github/workflows/stock-check.yml` (`*/30 * * * *`). GitHub Actions
-  doesn't reliably support intervals under ~5 minutes.
+  `.github/workflows/stock-check.yml` (`0 * * * *`, hourly). GitHub
+  Actions doesn't reliably support intervals under ~5 minutes.
+- **Daily status time**: edit the cron expression in
+  `.github/workflows/health-check.yml` (`0 8 * * *` = 9am UK time while
+  on BST). GitHub Actions cron is UTC-only and doesn't follow daylight
+  saving, so this will drift to 8am UK time once the clocks change to
+  GMT in late October — shift it back to `0 9 * * *` at that point if you
+  want it to stay at 9am local.
 - **Different product/store**: this scraping approach is specific to how
   this store's theme exposes colors and stock. A store using true Shopify
   variants for color would be simpler — see git history for the earlier,

@@ -16,6 +16,7 @@ import json
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -103,21 +104,13 @@ def notify(title, message):
         print(f"Failed to send notification: {exc}", file=sys.stderr)
 
 
-def main():
-    test_message = os.environ.get("TEST_MESSAGE")
-    if test_message:
-        notify("Stock Agent Test", test_message)
-        print("Sent test notification:", test_message)
-        return
-
+def collect_status():
     base_html = fetch_html(BASE_HANDLE)
     handles = discover_color_handles(base_html)
     print("Tracking color product handles:", handles)
 
-    previous = load_state()
     current = {}
     details = {}
-
     for handle in handles:
         try:
             color, sizes = stock_for_handle(handle)
@@ -130,6 +123,13 @@ def main():
             key = f"{handle}|{size}"
             current[key] = info["available"]
             details[key] = {"color": color, "size": size, "url": info["url"]}
+
+    return current, details
+
+
+def run_check():
+    current, details = collect_status()
+    previous = load_state()
 
     restocked = [
         key for key, available in current.items()
@@ -151,6 +151,38 @@ def main():
         print("No new restocks. Current status:", summary)
 
     save_state(current)
+
+
+def run_health_check():
+    current, details = collect_status()
+    in_stock = [key for key, available in current.items() if available]
+
+    if in_stock:
+        lines = [f"{details[k]['color']} ({details[k]['size']})" for k in in_stock]
+        body = "Currently IN STOCK:\n" + "\n".join(lines)
+    else:
+        body = f"All {len(current)} color/size combinations checked are sold out."
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    notify(
+        "Stock agent daily check-in",
+        f"Checker ran successfully at {timestamp}.\n{body}",
+    )
+    print("Sent daily health check:", body)
+
+
+def main():
+    test_message = os.environ.get("TEST_MESSAGE")
+    if test_message:
+        notify("Stock Agent Test", test_message)
+        print("Sent test notification:", test_message)
+        return
+
+    if os.environ.get("HEALTH_CHECK"):
+        run_health_check()
+        return
+
+    run_check()
 
 
 if __name__ == "__main__":
