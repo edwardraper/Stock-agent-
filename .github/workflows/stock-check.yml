@@ -1,11 +1,8 @@
 name: Hoodie Stock Check
 
 on:
-  # PAUSED: the hoodie restock watch is done. The schedule below is
-  # commented out so nothing runs automatically and no notifications are
-  # sent. Uncomment to resume the every-30-minutes checks.
-  # schedule:
-  #   - cron: "*/30 * * * *"
+  schedule:
+    - cron: "*/30 * * * *"
   workflow_dispatch:
     inputs:
       debug:

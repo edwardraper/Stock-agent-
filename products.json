@@ -1,0 +1,20 @@
+{
+  "ntfy_topic": "hoodie-restock-a1eb6a932d",
+  "products": [
+    {
+      "name": "Thomas Pink — White Classic Fit Poplin Double Cuff",
+      "url": "https://thomaspink.com/en-uk/products/mens-white-formal-shirt-classic-fit-ramses-poplin-double-cuff-shirt-mcs2a1f0302d-mtppp001-w1x",
+      "match": { "Size": ["16.0"] }
+    },
+    {
+      "name": "Thomas Pink — Pale Blue/White Gingham Cutaway Double Cuff",
+      "url": "https://thomaspink.com/en-uk/products/mens-pale-blue-white-formal-shirt-classic-cutaway-collar-poplin-gingham-check-double-cuff-mcs2a1f0302d-mtcpp001-b1w",
+      "match": { "Size": ["16.0"] }
+    },
+    {
+      "name": "Thomas Pink — Blue/White Panama Stripe Double Cuff",
+      "url": "https://thomaspink.com/en-uk/products/mens-blue-white-formal-shirt-classic-panama-stripe-double-cuff-mss2s4f03c1d-cnsct002-b2w",
+      "match": { "Size": ["16.0"] }
+    }
+  ]
+}
