@@ -1,4 +1,4 @@
-name: Hoodie Stock Check
+name: Stock Check
 
 on:
   schedule:
