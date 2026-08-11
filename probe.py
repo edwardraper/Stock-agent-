@@ -31,6 +31,11 @@ HEADERS = {
 def get(url):
     resp = requests.get(url, headers=HEADERS, timeout=30)
     print(f"GET {url} -> {resp.status_code} ({len(resp.content)} bytes)")
+    if resp.url != url:
+        # A truncated/stale handle silently redirecting to a *different*
+        # product is the difference between watching the right shirt and
+        # the wrong one, so always surface it.
+        print(f"  REDIRECTED TO: {resp.url}")
     return resp
 
 

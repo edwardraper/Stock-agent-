@@ -40,10 +40,13 @@ HEADERS = {
 DEBUG = os.environ.get("DEBUG", "").lower() not in ("", "false", "0")
 
 
+DEFAULT_ALERT_TITLE = "YOUR THOMAS PINK SHIRTS ARE BACK IN STOCK"
+
+
 def load_config():
     config = json.loads(CONFIG_FILE.read_text())
     topic = os.environ.get("NTFY_TOPIC") or config["ntfy_topic"]
-    return topic, config["products"]
+    return topic, config["products"], config.get("alert_title", DEFAULT_ALERT_TITLE)
 
 
 def fetch_variants(url):
@@ -73,7 +76,7 @@ def matches(values, wanted):
 
 def scan():
     """Return {key: {...}} for every variant we're watching."""
-    _, products = load_config()
+    _, products, _ = load_config()
     watched = {}
 
     for product in products:
@@ -140,7 +143,7 @@ def describe(info):
     return f"{info['product']} — {info['label']}"
 
 
-def run_check(topic):
+def run_check(topic, alert_title):
     watched = scan()
     previous = load_state()
 
@@ -151,7 +154,7 @@ def run_check(topic):
 
     if restocked:
         lines = [f"{describe(watched[k])}\n{watched[k]['url']}" for k in restocked]
-        notify("Back in stock!", "\n\n".join(lines), topic)
+        notify(alert_title, "\n\n".join(lines), topic)
         print("Notified restock for:", "; ".join(describe(watched[k]) for k in restocked))
     else:
         in_stock = [describe(i) for i in watched.values() if i["available"]]
@@ -175,7 +178,7 @@ def run_health_check(topic):
 
 
 def main():
-    topic, _ = load_config()
+    topic, _, alert_title = load_config()
 
     test_message = os.environ.get("TEST_MESSAGE")
     if test_message:
@@ -187,7 +190,7 @@ def main():
         run_health_check(topic)
         return
 
-    run_check(topic)
+    run_check(topic, alert_title)
 
 
 if __name__ == "__main__":
