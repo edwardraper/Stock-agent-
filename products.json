@@ -1,5 +1,6 @@
 {
   "ntfy_topic": "hoodie-restock-a1eb6a932d",
+  "alert_title": "YOUR THOMAS PINK SHIRTS ARE BACK IN STOCK",
   "products": [
     {
       "name": "Thomas Pink — White Classic Fit Poplin Double Cuff",
@@ -14,6 +15,17 @@
     {
       "name": "Thomas Pink — Blue/White Panama Stripe Double Cuff",
       "url": "https://thomaspink.com/en-uk/products/mens-blue-white-formal-shirt-classic-panama-stripe-double-cuff-mss2s4f03c1d-cnsct002-b2w",
+      "match": { "Size": ["16.0"] }
+    },
+    {
+      "name": "Thomas Pink — Pale Blue Classic Fit Poplin Double Cuff",
+      "_note": "Store's own handle says 'single-cuff' but the product title is 'Pale Blue Classic Fit Double Cuff Plain Poplin Formal Shirt'. Verified via probe: resolves 200 with no redirect.",
+      "url": "https://thomaspink.com/en-uk/products/mens-pale-blue-formal-shirt-classic-fit-ramses-poplin-single-cuff-shirt-mcs2a1f0301d-mtppp00",
+      "match": { "Size": ["16.0"] }
+    },
+    {
+      "name": "Thomas Pink — Pale Pink Cutaway Collar Poplin Double Cuff",
+      "url": "https://thomaspink.com/en-uk/products/mens-pale-pink-formal-shirt-classic-cutaway-collar-plain-poplin-double-cuff-mcs2a1f0302d-mtppp001-p1x",
       "match": { "Size": ["16.0"] }
     }
   ]
