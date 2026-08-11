@@ -135,10 +135,13 @@ def probe_size_hints(html):
     for m in re.finditer(r"<select\b(.*?)</select>", html, re.DOTALL | re.IGNORECASE):
         block = m.group(0)
         head = squash(block[:block.find(">") + 1])
+        # Locale pickers list every country on earth; they tell us nothing.
+        if re.search(r"country_code|language_code|localization", head, re.IGNORECASE):
+            print(f"\n  SELECT {head[:120]} ... (locale picker, skipped)")
+            continue
         print(f"\n  SELECT {head[:300]}")
         for om in re.finditer(r"<option\b(.*?)(?:</option>|>)", block, re.DOTALL | re.IGNORECASE):
-            opt = squash(om.group(0))
-            print("     ", opt[:220])
+            print("     ", squash(om.group(0))[:220])
 
 
 def probe_siblings(html, url):
@@ -160,8 +163,6 @@ def main():
     print("PROBING:", url)
     print("=" * 70)
 
-    probe_json_endpoint(url)
-
     print("\n=== product page HTML ===")
     try:
         resp = get(url)
@@ -174,12 +175,14 @@ def main():
     html = resp.text
 
     title = re.search(r"<title[^>]*>(.*?)</title>", html, re.DOTALL)
-    print("page title:", title.group(1).strip() if title else None)
+    print("page title:", squash(title.group(1)) if title else None)
 
-    probe_ld_json(html)
+    # Ordered least- to most-useful: the log reader only gets the tail.
+    probe_siblings(html, url)
     probe_inline_json(html)
     probe_size_hints(html)
-    probe_siblings(html, url)
+    probe_ld_json(html)
+    probe_json_endpoint(url)
 
 
 if __name__ == "__main__":
