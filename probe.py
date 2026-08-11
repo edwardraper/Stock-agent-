@@ -36,29 +36,32 @@ def get(url):
 
 def probe_json_endpoint(url):
     base = url.split("?")[0].rstrip("/")
-    print("\n=== .json endpoint ===")
-    try:
-        resp = get(base + ".json")
-    except requests.RequestException as exc:
-        print("request failed:", exc)
-        return
-    if resp.status_code != 200:
-        print("not available")
-        return
-    try:
-        product = resp.json()["product"]
-    except (ValueError, KeyError) as exc:
-        print("unexpected payload:", exc)
-        print(resp.text[:500])
-        return
-    print("title:", product.get("title"))
-    print("options:", json.dumps(product.get("options"), ensure_ascii=False))
-    for v in product.get("variants", []):
-        print(
-            "  variant:", v.get("id"), "|", v.get("title"),
-            "| o1=", v.get("option1"), "o2=", v.get("option2"), "o3=", v.get("option3"),
-            "| available=", v.get("available"),
-        )
+    for suffix in (".json", ".js"):
+        print(f"\n=== {suffix} endpoint ===")
+        try:
+            resp = get(base + suffix)
+        except requests.RequestException as exc:
+            print("request failed:", exc)
+            continue
+        if resp.status_code != 200:
+            print("not available")
+            continue
+        try:
+            payload = resp.json()
+        except ValueError as exc:
+            print("unparseable:", exc)
+            print(resp.text[:400])
+            continue
+        product = payload.get("product", payload)
+        print("title:", product.get("title"))
+        print("options:", json.dumps(product.get("options"), ensure_ascii=False)[:600])
+        for v in product.get("variants", []) or []:
+            print(
+                "  variant:", v.get("id"), "|", v.get("title"),
+                "| o1=", v.get("option1"), "o2=", v.get("option2"), "o3=", v.get("option3"),
+                "| available=", v.get("available"),
+                "| qty=", v.get("inventory_quantity"),
+            )
 
 
 def probe_ld_json(html):
@@ -116,6 +119,10 @@ def probe_inline_json(html):
             break
 
 
+def squash(text):
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def probe_size_hints(html):
     print("\n=== size / availability markup hints ===")
     for kw in ("sold out", "sold-out", "out of stock", "outofstock", "unavailable",
@@ -124,17 +131,14 @@ def probe_size_hints(html):
         if n:
             print(f"  {kw!r}: {n} occurrences")
 
-    print("\n-- inputs/options mentioning collar or size --")
-    seen = set()
-    for m in re.finditer(r"<(?:option|input|label|button)[^>]*>", html, re.IGNORECASE):
-        tag = m.group(0)
-        if re.search(r"1[4-8](\.5)?|size|collar", tag, re.IGNORECASE):
-            key = tag[:200]
-            if key not in seen:
-                seen.add(key)
-                print("   ", key)
-            if len(seen) >= 40:
-                return
+    print("\n-- <select> blocks (name/id + each option, whitespace squashed) --")
+    for m in re.finditer(r"<select\b(.*?)</select>", html, re.DOTALL | re.IGNORECASE):
+        block = m.group(0)
+        head = squash(block[:block.find(">") + 1])
+        print(f"\n  SELECT {head[:300]}")
+        for om in re.finditer(r"<option\b(.*?)(?:</option>|>)", block, re.DOTALL | re.IGNORECASE):
+            opt = squash(om.group(0))
+            print("     ", opt[:220])
 
 
 def probe_siblings(html, url):
