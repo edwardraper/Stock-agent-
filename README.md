@@ -4,6 +4,13 @@ Watches the [Double Layer Polar Fleece Hoodie](https://unionkingdomclo.com/produ
 on unionkingdomclo.com, in every color, and sends you a push notification
 the moment any color/size comes back in stock.
 
+> **Status: PAUSED.** The hoodie watch is finished, so both workflows have
+> their `schedule:` triggers commented out — nothing runs automatically
+> and no notifications are sent. All the code is kept intact and is ready
+> to be pointed at other products. Uncomment the `schedule:` block in
+> either workflow to resume, or run either one manually from the Actions
+> tab at any time.
+
 ## How it works
 
 On this store, colors aren't Shopify variants of one product — each color
@@ -28,14 +35,30 @@ So `check_stock.py`:
    push notification via [ntfy.sh](https://ntfy.sh) with a direct link to
    buy that variant.
 
-`.github/workflows/stock-check.yml` runs this on a GitHub Actions
-schedule (every 30 minutes) and can also be triggered manually.
+`.github/workflows/stock-check.yml` ran this on a GitHub Actions schedule
+(every 30 minutes) and can still be triggered manually.
 
-`.github/workflows/health-check.yml` runs a separate daily job (9am UK
+`.github/workflows/health-check.yml` ran a separate daily job (9am UK
 time) that does a real scan of every color/size and sends a status ntfy
 notification either way — "all sold out" or a list of what's in stock —
 so you have a heartbeat confirming the checker is actually running, not
 just silently failing.
+
+Both schedules are currently commented out (see Status above).
+
+## Reusing this for other products
+
+The notification plumbing (`notify()`, the ntfy topic, the state-diffing
+in `run_check()`, the daily heartbeat, and both workflows) is generic and
+carries over to any product. What is **not** generic is how stock gets
+read: `discover_color_handles()` and `extract_product_group()` are
+tailored to this specific Shopify theme — colors as separate cross-linked
+products, and availability in an embedded `ProductGroup` ld+json block.
+
+For a new store, expect to re-check that part first (this took several
+live debugging rounds the first time). A store that uses ordinary Shopify
+variants for size/color is simpler — see the earlier, variant-based
+version of `check_stock.py` in the git history for that shape.
 
 ## One-time setup (you need to do this)
 

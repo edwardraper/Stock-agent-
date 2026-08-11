@@ -1,12 +1,14 @@
 name: Daily Health Check
 
 on:
-  schedule:
-    # 09:00 UK time. UK is currently on BST (UTC+1), so this fires at
-    # 08:00 UTC. When the UK switches to GMT (UTC+0) in late October,
-    # this will fire at 08:00 GMT / 8am UK time instead of 9am, since
-    # GitHub Actions cron doesn't follow local daylight-saving changes.
-    - cron: "0 8 * * *"
+  # PAUSED: the hoodie restock watch is done, so the daily 9am status
+  # heartbeat is switched off too. Uncomment to resume.
+  #
+  # "0 8 * * *" is 09:00 UK time while the UK is on BST (UTC+1). GitHub
+  # Actions cron is UTC-only and doesn't follow daylight saving, so use
+  # "0 9 * * *" instead once the clocks go back to GMT.
+  # schedule:
+  #   - cron: "0 8 * * *"
   workflow_dispatch: {}
 
 jobs:
