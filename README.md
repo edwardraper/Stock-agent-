@@ -59,7 +59,7 @@ skipping, so a silent outage can't masquerade as "nothing restocked".
 - **`stock-check.yml`** — every 30 minutes. Diffs against `state.json`
   (committed back after each run) and notifies on any out-of-stock →
   in-stock transition.
-- **`health-check.yml`** — daily at 9am UK time. Reports current status
+- **`health-check.yml`** — Mondays and Thursdays at 5pm UK time. Reports current status
   either way, so you have a heartbeat proving the checker still runs.
 - **`probe.yml`** — manual. Takes any product URL and dumps how that store
   exposes options, variants and availability (`.json`/`.js` endpoints,
@@ -67,8 +67,16 @@ skipping, so a silent outage can't masquerade as "nothing restocked".
   pointing the agent at a new store.
 
 All three can be run by hand from the Actions tab. `stock-check` also
-accepts a `debug` toggle (log every matched variant) and a `test_message`
-box (send an arbitrary notification, skipping the stock check).
+accepts:
+
+- `debug` — log every matched variant and its availability.
+- `test_message` — send arbitrary text as a notification, skipping the
+  stock check entirely.
+- `simulate_restock` — scan the real products but send the genuine
+  restock alert as if everything were in stock. Useful for seeing exactly
+  what the real alert looks like. It deliberately leaves `state.json`
+  untouched: writing "everything in stock" would make a later real
+  restock look like no change and silently suppress the actual alert.
 
 ## Notifications
 
@@ -89,7 +97,9 @@ the random suffix; don't post it anywhere public.)
 
 - **Check frequency** — cron in `stock-check.yml` (`*/30 * * * *`).
   GitHub Actions won't reliably do intervals under ~5 minutes.
-- **Daily status time** — cron in `health-check.yml` (`0 8 * * *`).
+- **Status check-in time** — cron in `health-check.yml` (`0 16 * * 1,4`
+  = Mon & Thu 5pm UK while on BST; becomes 4pm when the clocks go back,
+  so change it to `0 17 * * 1,4` then).
 - **Pausing** — comment out the `schedule:` block in either workflow; the
   manual trigger keeps working.
 - **A store that isn't Shopify** — `fetch_variants()` is the only piece

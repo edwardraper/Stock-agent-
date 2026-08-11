@@ -1,11 +1,12 @@
-name: Daily Health Check
+name: Health Check
 
 on:
   schedule:
-    # 09:00 UK time while the UK is on BST (UTC+1). GitHub Actions cron is
-    # UTC-only and doesn't follow daylight saving, so switch this to
-    # "0 9 * * *" once the clocks go back to GMT.
-    - cron: "0 8 * * *"
+    # Mondays and Thursdays at 17:00 UK time. The UK is on BST (UTC+1)
+    # right now, so that's 16:00 UTC. GitHub Actions cron is UTC-only and
+    # doesn't follow daylight saving, so switch this to "0 17 * * 1,4"
+    # once the clocks go back to GMT or it will fire at 4pm instead.
+    - cron: "0 16 * * 1,4"
   workflow_dispatch: {}
 
 jobs:
@@ -20,7 +21,7 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      - name: Send daily status
+      - name: Send status
         env:
           NTFY_TOPIC: hoodie-restock-a1eb6a932d
           HEALTH_CHECK: "true"

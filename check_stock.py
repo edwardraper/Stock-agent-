@@ -163,6 +163,19 @@ def run_check(topic, alert_title):
     save_state(watched)
 
 
+def run_simulated_restock(topic, alert_title):
+    """Send the real restock alert, pretending everything is in stock.
+
+    Deliberately does NOT touch state.json: recording everything as
+    in-stock would make a later genuine restock look like "no change"
+    and silently suppress the real alert.
+    """
+    watched = scan()
+    lines = [f"{describe(info)}\n{info['url']}" for info in watched.values()]
+    notify(alert_title, "\n\n".join(lines), topic)
+    print(f"Sent SIMULATED restock alert for all {len(watched)} variants (state left untouched).")
+
+
 def run_health_check(topic):
     watched = scan()
     in_stock = [describe(i) for i in watched.values() if i["available"]]
@@ -173,8 +186,8 @@ def run_health_check(topic):
         body = f"All {len(watched)} watched variants are out of stock."
 
     stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    notify("Stock agent daily check-in", f"Checker ran successfully at {stamp}.\n{body}", topic)
-    print("Sent daily health check:", body)
+    notify("Stock agent check-in", f"Checker ran successfully at {stamp}.\n{body}", topic)
+    print("Sent health check:", body)
 
 
 def main():
@@ -184,6 +197,10 @@ def main():
     if test_message:
         notify("Stock Agent Test", test_message, topic)
         print("Sent test notification:", test_message)
+        return
+
+    if os.environ.get("SIMULATE_RESTOCK", "").lower() not in ("", "false", "0"):
+        run_simulated_restock(topic, alert_title)
         return
 
     if os.environ.get("HEALTH_CHECK", "").lower() not in ("", "false", "0"):

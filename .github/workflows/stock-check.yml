@@ -13,6 +13,10 @@ on:
         description: "If set, sends this text as an ntfy notification instead of checking stock"
         type: string
         default: ""
+      simulate_restock:
+        description: "Send the real restock alert as if everything were in stock (does not change saved state)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -38,6 +42,7 @@ jobs:
           NTFY_TOPIC: hoodie-restock-a1eb6a932d
           DEBUG: ${{ inputs.debug }}
           TEST_MESSAGE: ${{ inputs.test_message }}
+          SIMULATE_RESTOCK: ${{ inputs.simulate_restock }}
         run: python check_stock.py
 
       - name: Commit updated state
